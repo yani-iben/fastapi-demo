@@ -1,21 +1,8 @@
-# ── 1. Workflow name ─────────────────────────────────────────────
-name: Run Tests
-
-# ── 2. Trigger ───────────────────────────────────────────────────
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-
-# ── 3. Jobs ──────────────────────────────────────────────────────
 jobs:
   test:
-    # ── 4. Runner ──────────────────────────────────────────────
     runs-on: ubuntu-latest
-
+    
+    # ── Add this section ──────────────────────────────────────
     services:
       mongodb:
         image: mongo:latest
@@ -24,22 +11,26 @@ jobs:
         env:
           MONGO_INITDB_ROOT_USERNAME: admin
           MONGO_INITDB_ROOT_PASSWORD: password
+    # ──────────────────────────────────────────────────────────
 
     steps:
-      # ── 5. Checkout ──────────────────────────────────────────
       - name: Check out repository
         uses: actions/checkout@v4
 
-      # ── 6. Python setup ──────────────────────────────────────
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # ── 7. Install dependencies ──────────────────────────────
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
+          pip install pytest-asyncio httpx  # Ensure these are available
 
-      # ── 8. Run tests ─────────────────────────────────────────
       - name: Run pytest
+        env:
+          # Tell your FastAPI code how to find the GitHub service
+          MONGO_URI: mongodb://admin:password@localhost:27017/
+          MONGO_USERNAME: admin
+          MONGO_PASSWORD: password
         run: pytest
