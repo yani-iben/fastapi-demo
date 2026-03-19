@@ -1,36 +1,41 @@
+name: test-container
+
+on: [push]
+
 jobs:
-  test:
+  build_and_test:
     runs-on: ubuntu-latest
-    
-    # ── Add this section ──────────────────────────────────────
-    services:
-      mongodb:
-        image: mongo:latest
-        ports:
-          - 27017:27017
-        env:
-          MONGO_INITDB_ROOT_USERNAME: admin
-          MONGO_INITDB_ROOT_PASSWORD: password
-    # ──────────────────────────────────────────────────────────
-
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+      - name: Build Docker image
+        run: docker build -t test-image .
 
-      - name: Install dependencies
+      - name: Run container
+        run: docker run -d -p 8080:80 --name test-container test-image
+
+      - name: Wait for container to start
         run: |
-          pip install -r requirements.txt
-          pip install pytest-asyncio httpx  # Ensure these are available
+          echo "Waiting for container to start..."
+          sleep 10
 
-      - name: Run pytest
-        env:
-          # Tell your FastAPI code how to find the GitHub service
-          MONGO_URI: mongodb://admin:password@localhost:27017/
-          MONGO_USERNAME: admin
-          MONGO_PASSWORD: password
-        run: pytest
+      - name: Test root endpoint
+        run: |
+          curl -f http://localhost:8080/
+          if [ $? -ne 0 ]; then
+            echo "Failed to get a 200 OK response from the root endpoint."
+            exit 1
+          fi
+
+      - name: Test docs endpoint
+        run: |
+          curl -f http://localhost:8080/docs
+          if [ $? -ne 0 ]; then
+            echo "Failed to get a 200 OK response from the /docs endpoint."
+            exit 1
+          fi
+
+      - name: Stop and remove container
+        if: always()
+        run: docker stop test-container && docker rm test-container
