@@ -16,9 +16,16 @@ people = [
 
 for person in people:
     print("Creating person")
-    response = httpx.post('http://localhost:8000/people', json=person)
+    # Use port 80 when running INSIDE the container
+    # Use the service name 'api' instead of localhost
+    response = httpx.post('http://api:80/people', json=person)
     print(response.json())
 
 print("Getting people")
-response = httpx.get('http://localhost:8000/people')
-print(response.json())
+# Use the service name 'api' instead of localhost
+response = httpx.get('http://api:80/people')
+if response.status_code == 200:
+    print(response.json())
+else:
+    print(f"Error: {response.status_code}")
+    print(response.text)
